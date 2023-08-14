@@ -5,7 +5,6 @@ import (
 	cli	"github.com/urfave/cli/v2"
 	timer "github.com/maximiliansoerenpollak/duopomo/timer"
 	"os"
-	"fmt"
 	"log"
 )
 
@@ -28,7 +27,7 @@ func main() {
 					Usage: "Determin if you want a solo or duo session",
 			},
 				&cli.UintFlag{
-					Name: "time",
+					Name: "timer",
 					Usage: "How long (in minutes) should the timer be",
 				},
 			},
