@@ -6,6 +6,8 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"bufio"
+	"os"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -15,18 +17,19 @@ type pomotimer struct {
 	Break  bool // Break timer or not
 }
 
-
-func startTimer(t int) <-chan time.Time {
-	ticker := time.NewTicker(time.Second)
-	// not sure if this works?
-	go func() <-chan time.Time {
-				return ticker.C
-	}()
-	time.Sleep(time.Duration(t) * time.Second)
-	ticker.Stop()
-	fmt.Println("Wow timer is done")
-	return nil
+type command struct {
+	Message string
 }
+
+func ConvertTimerToInt(c *cli.Context) int {
+	timerInt, err := strconv.Atoi(c.String("timer"))
+	if err != nil {
+		log.Println("Error converting Timer")
+		log.Fatal(err)
+	}
+	return timerInt
+}
+
 
 func SoloTimer(c *cli.Context) error {
 	timerInt, err := strconv.Atoi(c.String("timer"))
@@ -34,8 +37,30 @@ func SoloTimer(c *cli.Context) error {
 		log.Println("Could not convert timer to integer")
 		log.Fatal(err)
 	}
-	ch := startTimer(timerInt)
-	ProgressBar(int64(timerInt), ch)
+	t := time.NewTicker(time.Second)
+	done := make(chan bool)
+	bar := BarInit()
+	onePercent := ((timerInt * 60) / 100) //Total time in minutes * 60 -> make it seconds -> / 100 to make it 1% 
+	go func() {
+		i := 0
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				// Increasing the bar by 1% each time we hit 1% of the total.
+				if i % onePercent == 0 { 
+					bar.Play()
+					i++
+				}else{
+					i++
+				}
+			}
+		}
+	}()
+	time.After(time.Duration(timerInt) * 60 * time.Second)
+	done <- true
+	bar.Finish()
 	return nil
 }
 
@@ -49,6 +74,10 @@ func Timer(c *cli.Context) error {
 	}
 	if !c.IsSet("timer") {
 		return errors.New("need to provide a timer time. the provided number is how long the timer is in minutes")
+	}
+	time := ConvertTimerToInt(c)
+	if time < 2 {
+		return errors.New("minimum timer length is 2 minutes. please provide a time that is longer or equal at least that")
 	}
 	if c.String("type") == "solo" || c.String("type") == "s" {
 		SoloTimer(c)
