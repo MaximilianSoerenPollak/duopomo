@@ -32,7 +32,6 @@ func (bar *Bar) getPercent() int64 {
 }
 
 func (bar *Bar) Play() {
-	bar.cur = bar.cur + 1
 	last := bar.percent
 	bar.percent = bar.getPercent()
 	if bar.percent != last && bar.percent%2 == 0 {
@@ -41,6 +40,7 @@ func (bar *Bar) Play() {
 		bar.rate = graph
 	}
 	fmt.Printf("\r[%-50s]%3d%% %8d/%d", bar.rate, bar.percent, bar.cur, bar.total)
+	bar.cur = bar.cur + 1
 }
 func BarInit() Bar {
 	var bar Bar

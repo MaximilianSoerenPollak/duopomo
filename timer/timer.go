@@ -6,8 +6,7 @@ import (
 	"log"
 	"strconv"
 	"time"
-	"bufio"
-	"os"
+
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -21,6 +20,11 @@ type command struct {
 	Message string
 }
 
+type trackingTicker struct {
+	Ticker     *time.Ticker
+	PassedTime int
+}
+
 func ConvertTimerToInt(c *cli.Context) int {
 	timerInt, err := strconv.Atoi(c.String("timer"))
 	if err != nil {
@@ -30,6 +34,9 @@ func ConvertTimerToInt(c *cli.Context) int {
 	return timerInt
 }
 
+func calcTimeRemaining(t *trackingTicker, totalTime int) int {
+	return t.PassedTime - totalTime
+}
 
 func SoloTimer(c *cli.Context) error {
 	timerInt, err := strconv.Atoi(c.String("timer"))
@@ -37,30 +44,48 @@ func SoloTimer(c *cli.Context) error {
 		log.Println("Could not convert timer to integer")
 		log.Fatal(err)
 	}
-	t := time.NewTicker(time.Second)
+	t := trackingTicker{Ticker: time.NewTicker(time.Second), PassedTime: 0}
+	// Define channels
 	done := make(chan bool)
+	stopchan := make(chan bool)
+	restartchan := make(chan bool)
+	// Initiate Bar
 	bar := BarInit()
-	onePercent := ((timerInt * 60) / 100) //Total time in minutes * 60 -> make it seconds -> / 100 to make it 1% 
+	onePercent := ((timerInt * 60) / 100) //Total time in minutes * 60 -> make it seconds -> / 100 to make it 1%
 	go func() {
-		i := 0
 		for {
 			select {
 			case <-done:
 				return
-			case <-t.C:
+			case <-t.Ticker.C:
 				// Increasing the bar by 1% each time we hit 1% of the total.
-				if i % onePercent == 0 { 
+				if t.PassedTime%onePercent == 0 {
+
 					bar.Play()
-					i++
-				}else{
-					i++
+					t.PassedTime++
+				} else {
+					t.PassedTime++
 				}
+			case <-stopchan:
+				t.Ticker.Stop()
+			case <-restartchan:
+				t.Ticker.Reset(time.Second)
 			}
 		}
 	}()
-	time.After(time.Duration(timerInt) * 60 * time.Second)
-	done <- true
-	bar.Finish()
+	go func() {
+		if t.PassedTime == timerInt {
+			fmt.Println("Inside the passedtime == timerint")
+			done <- true
+		}
+	}()
+	for {
+		if <-done {
+			bar.Finish()
+			break
+		}
+	}
+	
 	return nil
 }
 
