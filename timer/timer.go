@@ -46,9 +46,9 @@ func SoloTimer(c *cli.Context) error {
 	}
 	t := trackingTicker{Ticker: time.NewTicker(time.Second), PassedTime: 0}
 	// Define channels
-	done := make(chan bool)
-	stopchan := make(chan bool)
-	restartchan := make(chan bool)
+	done := make(chan bool, 1)
+	stopchan := make(chan bool, 1)
+	restartchan := make(chan bool, 1)
 	// Initiate Bar
 	bar := BarInit()
 	onePercent := ((timerInt * 60) / 100) //Total time in minutes * 60 -> make it seconds -> / 100 to make it 1%
@@ -57,6 +57,12 @@ func SoloTimer(c *cli.Context) error {
 			select {
 			case <-done:
 				return
+			case <-stopchan:
+				t.Ticker.Stop()
+				fmt.Println("stopped ticker")
+			case <-restartchan:
+				t.Ticker.Reset(time.Second)
+				fmt.Println("restarted timer")
 			case <-t.Ticker.C:
 				// Increasing the bar by 1% each time we hit 1% of the total.
 				if t.PassedTime%onePercent == 0 {
@@ -66,26 +72,41 @@ func SoloTimer(c *cli.Context) error {
 				} else {
 					t.PassedTime++
 				}
-			case <-stopchan:
-				t.Ticker.Stop()
-			case <-restartchan:
-				t.Ticker.Reset(time.Second)
 			}
 		}
 	}()
 	go func() {
-		if t.PassedTime == timerInt {
-			fmt.Println("Inside the passedtime == timerint")
-			done <- true
+		fmt.Println("\nExceuting the if foor loop thingy\n")
+		select {
+		case <-stopchan:
+			time.Sleep(5 * time.Second)
+			restartchan <- true
+			fmt.Printf("\nRestarted channel\n")
 		}
 	}()
+	// First GO ROUTINE that is executed
+	go func() {
+		for {
+			if bar.percent >= 11 {
+				fmt.Printf("\nPassed time before stop: %d\n", t.PassedTime)
+				stopchan <- true
+				fmt.Printf("\nPassed time after stop: %d\n", t.PassedTime)
+				break
+			}
+		}
+	}()
+	select {
+	case <-restartchan:
+		fmt.Println("\nI found restart to be true\n")
+		break
+	}
+	// fmt.Printf("Passed time after restart: %d\n", t.PassedTime)
 	for {
-		if <-done {
-			bar.Finish()
+		if bar.percent >= 100 {
+			done <- true
 			break
 		}
 	}
-	
 	return nil
 }
 
