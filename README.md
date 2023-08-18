@@ -15,11 +15,11 @@ ToDo's
 
 - [x] Initialize Project
 - [ ] Make CLI and build timer locally
-    - [ ] Get CLI up and running
-    - [ ] Get Pomodoro timer set up locally 
-        - [ ] Be able to start timer
+    - [x] Get CLI up and running
+    - [x] Get Pomodoro timer set up locally 
+        - [x] Be able to start timer
         - [ ] Able to pause timer 
-        - [ ] Able to change length of timer 
+        - [x] Able to change length of timer 
         - [ ] Able to define break lengths 
         - [ ] Able to skip breaks 
 - [ ] Make a nice README
