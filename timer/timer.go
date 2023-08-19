@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
+	"github.com/eiannone/keyboard"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -45,10 +47,13 @@ func SoloTimer(c *cli.Context) error {
 		log.Fatal(err)
 	}
 	t := trackingTicker{Ticker: time.NewTicker(time.Second), PassedTime: 0}
+	// Track if timer has paused
+	paused := false
 	// Define channels
 	done := make(chan bool, 1)
 	stopchan := make(chan bool, 1)
 	restartchan := make(chan bool, 1)
+	resetchan := make(chan bool, 1)
 	// Initiate Bar
 	bar := BarInit()
 	onePercent := ((timerInt * 60) / 100) //Total time in minutes * 60 -> make it seconds -> / 100 to make it 1%
@@ -59,10 +64,14 @@ func SoloTimer(c *cli.Context) error {
 				return
 			case <-stopchan:
 				t.Ticker.Stop()
+				paused = true
 				fmt.Println("stopped ticker")
 			case <-restartchan:
 				t.Ticker.Reset(time.Second)
-				fmt.Println("restarted timer")
+			case <-resetchan:
+				t.Ticker.Reset(time.Second)
+				t.PassedTime = 0
+				bar.cur = 0
 			case <-t.Ticker.C:
 				// Increasing the bar by 1% each time we hit 1% of the total.
 				if t.PassedTime%onePercent == 0 {
@@ -75,16 +84,38 @@ func SoloTimer(c *cli.Context) error {
 			}
 		}
 	}()
+	// GO ROUTINE for grabbing keyboard input
 	go func() {
-		fmt.Println("\nExceuting the if foor loop thingy\n")
-		select {
-		case <-stopchan:
-			time.Sleep(5 * time.Second)
-			restartchan <- true
-			fmt.Printf("\nRestarted channel\n")
+		for {
+			ch, key, err := keyboard.GetSingleKey()
+			if err != nil {
+				panic(err)
+			}
+			if key == '\x03' { // CTRL + C so we are sure we can exit forcefully
+				fmt.Println("Exiting program")
+				os.Exit(1)
+			}
+			if key == 32 { // This is the int representation of spacebar 32 = " "
+				if paused {
+					fmt.Println("Restarting timer")
+					restartchan <- true
+				} else {
+					fmt.Println("stopping timer")
+					stopchan <- true
+				}
+			}
+			switch ch {
+			case 'r':
+				fmt.Println("Restarting the timer...")
+				resetchan <- true
+			case 'q':
+				fmt.Println("stopping timer")
+				stopchan <- true
+				fmt.Println("Exiting program")
+				os.Exit(1)
+			}
 		}
 	}()
-	// First GO ROUTINE that is executed
 	go func() {
 		for {
 			if bar.percent >= 11 {
@@ -95,11 +126,6 @@ func SoloTimer(c *cli.Context) error {
 			}
 		}
 	}()
-	select {
-	case <-restartchan:
-		fmt.Println("\nI found restart to be true\n")
-		break
-	}
 	// fmt.Printf("Passed time after restart: %d\n", t.PassedTime)
 	for {
 		if bar.percent >= 100 {

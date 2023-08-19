@@ -16,7 +16,7 @@ type Bar struct {
 
 func (bar *Bar) NewOption(start int64) {
 	bar.cur = start
-	bar.total = 100 
+	bar.total = 100
 	if bar.graph == "" {
 		bar.graph = "#"
 	}
