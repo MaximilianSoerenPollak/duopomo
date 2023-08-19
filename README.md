@@ -18,10 +18,13 @@ ToDo's
     - [x] Get CLI up and running
     - [x] Get Pomodoro timer set up locally 
         - [x] Be able to start timer
-        - [ ] Able to pause timer 
+        - [x] Able to pause timer 
+        - [x] Able to restart timer
+        - [x] Able to reset timer
         - [x] Able to change length of timer 
         - [ ] Able to define break lengths 
         - [ ] Able to skip breaks 
+    - [x] Read in Keyboard events
 - [ ] Make a nice README
 - [ ] Invite Collaborators
 
